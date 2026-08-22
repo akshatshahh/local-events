@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Local Events</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <h1>Local Events</h1>
+  <form id="search-form" class="controls" autocomplete="off">
+    <div class="field location-field">
+      <label for="location">Where</label>
+      <div class="location-row">
+        <input id="location" name="location" type="text" placeholder="City, ST — e.g. Austin, TX" required />
+        <button type="button" id="geo-btn" class="ghost" title="Use my current location">Near me</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="radius">Within</label>
+      <select id="radius" name="radius">
+        <option value="10">10 km</option>
+        <option value="25">25 km</option>
+        <option value="40" selected>40 km</option>
+        <option value="80">80 km</option>
+        <option value="160">160 km</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sort">Sort</label>
+      <select id="sort" name="sort">
+        <option value="date" selected>Soonest</option>
+        <option value="distance">Closest</option>
+      </select>
+    </div>
+    <button type="submit" class="primary">Find events</button>
+  </form>
+  <nav class="windows" id="windows" aria-label="Date range">
+    <button data-window="today">Tonight</button>
+    <button data-window="weekend">This weekend</button>
+    <button data-window="week">Next 7 days</button>
+    <button data-window="month" class="active">Next 30 days</button>
+    <button data-window="all">Anytime</button>
+  </nav>
+</header>
+
+<main>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+  <div id="facets" class="facets" hidden></div>
+  <section id="results" class="results"></section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
