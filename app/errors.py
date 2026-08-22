@@ -1,0 +1,33 @@
+class AppError(Exception):
+    """Base class for errors we deliberately surface to the client."""
+
+    status_code = 500
+    code = "internal_error"
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class ProviderUnavailable(AppError):
+    """A provider failed in a way the user can only retry (5xx, timeout, network)."""
+
+    status_code = 503
+    code = "provider_unavailable"
+
+
+class ProviderAuthError(AppError):
+    """Our credentials for a provider are missing or rejected. An operator must fix this."""
+
+    status_code = 502
+    code = "provider_auth_error"
+
+
+class BadRequest(AppError):
+    status_code = 400
+    code = "bad_request"
+
+
+class LocationNotFound(AppError):
+    status_code = 404
+    code = "location_not_found"
