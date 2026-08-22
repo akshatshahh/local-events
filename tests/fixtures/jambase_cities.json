@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "pagination": {
+    "page": 1,
+    "perPage": 3,
+    "totalItems": 1,
+    "totalPages": 1
+  },
+  "cities": [
+    {
+      "@type": "City",
+      "identifier": "jambase:4218489",
+      "name": "Austin",
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 30.3006,
+        "longitude": -97.7517
+      },
+      "address": {
+        "@type": "PostalAddress",
+        "addressRegion": "US-TX",
+        "addressCountry": "US"
+      },
+      "x-timezone": "America/Chicago",
+      "x-numUpcomingEvents": 776
+    }
+  ]
+}

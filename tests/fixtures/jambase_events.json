@@ -1,0 +1,184 @@
+{
+  "success": true,
+  "pagination": {
+    "page": 1,
+    "perPage": 2,
+    "totalItems": 2,
+    "totalPages": 1
+  },
+  "events": [
+    {
+      "@type": "Concert",
+      "name": "ZZ Top at ACL Live at The Moody Theater",
+      "identifier": "jambase:16114286",
+      "url": "https://www.jambase.com/show/zz-top-acl-live-at-the-moody-theater-20260822",
+      "image": "https://www.jambase.com/wp-content/uploads/2025/05/zz-top-live-2025-steinfeldt-1480x832.jpg",
+      "eventStatus": "scheduled",
+      "startDate": "2026-08-22T20:00:00",
+      "endDate": "2026-08-22",
+      "previousStartDate": "",
+      "doorTime": "19:00:00",
+      "location": {
+        "@type": "Venue",
+        "name": "ACL Live at The Moody Theater",
+        "identifier": "jambase:69416",
+        "url": "https://www.jambase.com/venue/acl-live-at-the-moody-theater",
+        "image": "",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "310 Willie Nelson Blvd, W. 2nd Street",
+          "addressLocality": "Austin",
+          "postalCode": "78701",
+          "addressRegion": {
+            "@type": "State",
+            "identifier": "US-TX",
+            "name": "Texas",
+            "alternateName": "TX"
+          },
+          "addressCountry": {
+            "@type": "Country",
+            "identifier": "US",
+            "name": "United States",
+            "alternateName": "USA"
+          },
+          "x-streetAddress2": "",
+          "x-timezone": "America/Chicago"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 30.2655,
+          "longitude": -97.7494
+        },
+        "maximumAttendeeCapacity": 2570
+      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "ZZ Top Austin Tickets on AXS",
+          "identifier": "jambase:16114288",
+          "url": "https://www.axs.com/events/1413851/zz-top-tickets",
+          "category": "ticketingLinkPrimary",
+          "priceSpecification": {},
+          "seller": {
+            "@type": "Organization",
+            "name": "AXS",
+            "identifier": "axs"
+          }
+        },
+        {
+          "@type": "Offer",
+          "name": "ZZ Top Austin Tickets on StubHub",
+          "identifier": "jambase:16129151",
+          "url": "https://www.stubhub.com/zz-top-austin-tickets-8-22-2026/event/160956921/",
+          "category": "ticketingLinkSecondary",
+          "priceSpecification": {},
+          "seller": {
+            "@type": "Organization",
+            "name": "StubHub",
+            "identifier": "stubhub"
+          }
+        }
+      ],
+      "performer": [
+        {
+          "@type": "MusicGroup",
+          "name": "ZZ Top",
+          "identifier": "jambase:43326",
+          "url": "https://www.jambase.com/band/zz-top",
+          "genre": ["blues", "rock"],
+          "x-numUpcomingEvents": 37,
+          "x-isHeadliner": true
+        },
+        {
+          "@type": "MusicGroup",
+          "name": "Mike Flanigin",
+          "identifier": "jambase:6024316",
+          "url": "https://www.jambase.com/band/mike-flanigin",
+          "genre": [],
+          "x-numUpcomingEvents": 2,
+          "x-isHeadliner": false
+        }
+      ]
+    },
+    {
+      "@type": "Concert",
+      "name": "Dirty Heads at Germania Insurance Amphitheater",
+      "identifier": "jambase:15930122",
+      "url": "https://www.jambase.com/show/dirty-heads-germania-insurance-amphitheater-20260822",
+      "image": "https://www.jambase.com/wp-content/uploads/2015/06/dirty-heads-press-2025-scarce-1480x832.jpg",
+      "eventStatus": "scheduled",
+      "startDate": "2026-08-22T17:30:00",
+      "endDate": "2026-08-22",
+      "previousStartDate": "",
+      "doorTime": "",
+      "location": {
+        "@type": "Venue",
+        "name": "Germania Insurance Amphitheater",
+        "identifier": "jambase:69033",
+        "url": "https://www.jambase.com/venue/germania-insurance-amphitheater",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "9201 Circuit of the Americas Blvd",
+          "addressLocality": "Austin",
+          "postalCode": "78617",
+          "addressRegion": {
+            "@type": "State",
+            "identifier": "US-TX",
+            "name": "Texas",
+            "alternateName": "TX"
+          },
+          "addressCountry": {
+            "@type": "Country",
+            "identifier": "US",
+            "name": "United States",
+            "alternateName": "USA"
+          },
+          "x-timezone": "America/Chicago"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 30.1329,
+          "longitude": -97.6407
+        },
+        "maximumAttendeeCapacity": 14000
+      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Dirty Heads Austin Tickets on Ticketmaster",
+          "identifier": "jambase:15930127",
+          "url": "https://www.ticketmaster.com/event/example",
+          "category": "ticketingLinkPrimary",
+          "priceSpecification": {
+            "@type": "PriceSpecification",
+            "minPrice": "24.75",
+            "maxPrice": "1,015.02",
+            "price": "24.75",
+            "priceCurrency": "USD"
+          },
+          "seller": {
+            "@type": "Organization",
+            "name": "Ticketmaster",
+            "identifier": "ticketmaster"
+          }
+        }
+      ],
+      "performer": [
+        {
+          "@type": "MusicGroup",
+          "name": "Dirty Heads",
+          "identifier": "jambase:44867",
+          "genre": ["reggae"],
+          "x-isHeadliner": true
+        },
+        {
+          "@type": "MusicGroup",
+          "name": "311",
+          "identifier": "jambase:41722",
+          "genre": ["hip-hop-rap", "metal", "pop", "rock"],
+          "x-isHeadliner": false
+        }
+      ]
+    }
+  ]
+}
