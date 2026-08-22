@@ -20,7 +20,7 @@ import unicodedata
 from collections import Counter
 from datetime import time
 
-from app.errors import AppError, LocationNotFound
+from app.errors import AmbiguousLocation, AppError, LocationNotFound
 from app.models import (
     Event,
     EventSearch,
@@ -53,12 +53,18 @@ class DiscoveryService:
         if geocoder is None:
             raise LocationNotFound("No provider can resolve locations.")
 
-        location = await geocoder.resolve_location(query)
-        if location is None:
+        found = await geocoder.find_cities(query)
+        if not found:
             raise LocationNotFound(
                 f"Could not find a place matching {query!r}. "
-                "Try 'City, ST' or a 'lat,lng' pair."
+                "Try a full city name (San Francisco, not SF) or a 'lat,lng' pair."
             )
+        if len(found) > 1:
+            raise AmbiguousLocation(
+                f"Several places match {query!r}. Pick one — we do not guess.",
+                found,
+            )
+        location = found[0]
         self._cache.set(key, location)
         return location
 

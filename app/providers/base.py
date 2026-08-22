@@ -33,5 +33,11 @@ class EventProvider(ABC):
         """Geocode free text. Return None if this provider cannot resolve it."""
         return None
 
+    async def find_cities(self, query: str) -> list[ResolvedLocation]:
+        """All matching cities. Empty means none; more than one means the caller must ask the user."""
+        location = await self.resolve_location(query)
+        return [location] if location else []
+
+
     async def aclose(self) -> None:  # noqa: B027 - optional hook, not every provider holds resources
         """Release any long-lived resources (HTTP pools, etc.)."""

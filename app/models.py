@@ -132,6 +132,8 @@ class ResolvedLocation(BaseModel):
     city: str | None = None
     region: str | None = None
     country: str | None = None
+    # JamBase's x-numUpcomingEvents when present; not used to auto-pick a city.
+    upcoming_event_count: int | None = None
 
 
 class EventSearch(BaseModel):

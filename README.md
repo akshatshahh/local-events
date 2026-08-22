@@ -24,7 +24,7 @@ cp .env.example .env   # then put your key in JAMBASE_API_KEY
 
 Open <http://127.0.0.1:8000>. Interactive API docs at `/docs`.
 
-Optional — 17 tests, no network, no API key:
+Optional — 18 tests, no network, no API key:
 
 ```bash
 .venv/bin/pip install -r requirements-dev.txt && .venv/bin/python -m pytest
@@ -35,7 +35,7 @@ I only test the things a wrong answer would look like it works:
 | File | What a failure would hide |
 | --- | --- |
 | `test_mapper.py` | Mapping against a **live** Austin payload; empty `doorTime` filled from showtime; invented titles |
-| `test_api.py` | Happy path + Bearer auth; unknown city; rejected key; 5xx retried then degraded; 4xx not retried; Near me keeps your coordinates |
+| `test_api.py` | Happy path + Bearer auth; several cities matching `LA` (not auto-picked); unknown city; rejected key; 5xx retried then degraded; 4xx not retried; Near me keeps your coordinates |
 | `test_discovery.py` | One dead provider 500ing the request; the same show listed twice; cache not used |
 | `test_enrich.py` | Distance invented when geo is missing; a venue-size tag with no capacity |
 | `test_provider_jambase.py` | Wrong JamBase query params (silent empty pages) |
@@ -163,7 +163,7 @@ and kept ownership of schema, missing-data rules, and anything that touches corr
 
 ### Something AI suggested that I changed
 
-Two worth reporting.
+A few worth reporting.
 
 **Invented names.** An earlier mapper filled gaps with `"Venue TBA"`, `"Unknown artist"`, and
 `"Untitled event"`. That looks complete and is wrong. Missing fields now stay `None` and the UI
@@ -175,6 +175,13 @@ call it urgency. That is an interpretation the source did not make, and it is ea
 it were a fact. I rejected it. Capacity bands stayed because they were an explicit, labeled
 interpretation of a real number, not a story about touring.
 
+**Picking a city by how busy it is.** The first geocoder ranked JamBase city matches by
+`x-numUpcomingEvents` and took the max. That looks like it "found LA" and is wrong: JamBase
+prefix-matches `LA` to many `La…` cities, and Las Vegas simply had the most upcoming events.
+I asked for the opposite — if more than one city matches, return them and let the user pick.
+I also did not add a nickname table (`SF` → San Francisco). `SF` still 404s because JamBase
+has no such city; that is the API, not something to paper over.
+
 **A design correction.** The generated mapper computed `capacity_band` inside the JamBase mapper.
 That puts a domain rule in a provider adapter. I moved the banding onto the `Venue` model as a
 `model_validator` so no provider can forget it or disagree.
@@ -184,9 +191,11 @@ That puts a domain rule in a provider adapter. I moved the banding onto the `Ven
 **Location resolution is city-granularity and single-sourced.** JamBase's `/geographies/cities`
 has no postal-code parameter, so "events near 78704" can't be answered precisely — the app
 resolves to the city centroid and searches a radius from there. For a large metro that centroid
-can sit 15+ km from the user, which visibly skews the `distance` sort. The browser's "Near me"
-button avoids this entirely (it passes exact coordinates), but typed input can't. The fix is a
-dedicated geocoder behind the same interface — deliberately deferred, not overlooked.
+can sit 15+ km from the user, which visibly skews the `distance` sort. Typed names are also
+prefix-matched (`LA` is every `La…` city with upcoming events, not Los Angeles), which is why
+the UI asks you to pick when several match. The browser's "Near me" button avoids the centroid
+problem (it passes exact coordinates), but typed input can't. The fix is a dedicated geocoder
+behind the same interface — deliberately deferred, not overlooked.
 
 Secondary: the cache is per-process, so horizontal scaling multiplies upstream calls.
 
@@ -224,6 +233,6 @@ is done. What genuinely changes at 10 providers:
 
 | Area | Grade | Reasoning |
 | --- | --- | --- |
-| **Code quality** | **A−** | Clear layering, typed throughout, 17 tests aimed at silent-wrong failures (live mapping, retries, provider isolation), lint clean. Marked down because there's no structured logging and the frontend has no tests. |
+| **Code quality** | **A−** | Clear layering, typed throughout, 18 tests aimed at silent-wrong failures (live mapping, retries, provider isolation, ambiguous cities), lint clean. Marked down because there's no structured logging and the frontend has no tests. |
 | **Work product** | **A−** | Complete and working against live data: geocoding, filtering, soonest/closest sort, honest missing-data states. Marked down for no pagination and no map. |
 | **Extensibility** | **A** | The provider seam is real, not aspirational — validated by the fact that the entire discovery test suite runs against fake providers, never JamBase. Adding a source touches two files. The known ceiling (cross-provider dedupe, pull-based fan-out) is identified above with a concrete plan rather than left as a surprise. |

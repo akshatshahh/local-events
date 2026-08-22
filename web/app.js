@@ -18,10 +18,12 @@ const form = $("#search-form");
 const statusEl = $("#status");
 const resultsEl = $("#results");
 const facetsEl = $("#facets");
+const candidatesEl = $("#candidates");
 
 async function search({ keepFacets = false } = {}) {
   if (!state.location.trim()) return;
 
+  hideCandidates();
   state.loading = true;
   setStatus(`Searching near ${state.location}…`);
   resultsEl.setAttribute("aria-busy", "true");
@@ -41,12 +43,22 @@ async function search({ keepFacets = false } = {}) {
     const data = await res.json();
 
     if (!res.ok) {
-      const msg = data?.error?.message || data?.detail || "Something went wrong.";
+      const err = data?.error || {};
+      if (res.status === 409 && err.code === "ambiguous_location" && err.candidates?.length) {
+        showCandidates(err.candidates, err.message);
+        state.events = [];
+        render();
+        return;
+      }
+      hideCandidates();
+      const msg = err.message || data?.detail || "Something went wrong.";
       state.events = [];
       render();
       setStatus(msg, true);
       return;
     }
+
+    hideCandidates();
 
     state.events = data.events;
     if (!keepFacets) state.facets = data.genre_facets;
@@ -83,6 +95,29 @@ function setStatus(text, isError = false) {
   statusEl.classList.toggle("error", isError);
 }
 
+function showCandidates(candidates, message) {
+  candidatesEl.hidden = false;
+  candidatesEl.innerHTML = "";
+  candidates.forEach((c) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    const extra = c.upcoming_event_count != null ? ` (${c.upcoming_event_count})` : "";
+    b.textContent = `${c.label}${extra}`;
+    b.onclick = () => {
+      $("#location").value = c.label;
+      hideCandidates();
+      form.requestSubmit();
+    };
+    candidatesEl.appendChild(b);
+  });
+  setStatus(message || "Pick a place.");
+}
+
+function hideCandidates() {
+  candidatesEl.hidden = true;
+  candidatesEl.innerHTML = "";
+}
+
 const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const WARN = new Set(["Cancelled", "Postponed"]);
@@ -99,7 +134,7 @@ function listedClass(value) {
 function render() {
   resultsEl.innerHTML = "";
   if (!state.events.length) {
-    if (!state.loading && state.location) {
+    if (!state.loading && state.location && candidatesEl.hidden) {
       resultsEl.innerHTML = `<p class="empty">Nothing here yet.<br />Widen the radius or pick a longer date range.</p>`;
     }
     return;

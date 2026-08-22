@@ -31,3 +31,14 @@ class BadRequest(AppError):
 class LocationNotFound(AppError):
     status_code = 404
     code = "location_not_found"
+
+
+class AmbiguousLocation(AppError):
+    """JamBase returned several cities; we do not pick one by event volume."""
+
+    status_code = 409
+    code = "ambiguous_location"
+
+    def __init__(self, message: str, candidates: list):
+        super().__init__(message)
+        self.candidates = candidates

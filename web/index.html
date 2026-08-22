@@ -9,6 +9,7 @@
 <body>
 <header class="topbar">
   <h1>Local Events</h1>
+  <p class="hint">Type a city name (San Francisco, not SF).</p>
   <form id="search-form" class="controls" autocomplete="off">
     <div class="field location-field">
       <label for="location">Where</label>
@@ -36,6 +37,7 @@
     </div>
     <button type="submit" class="primary">Find events</button>
   </form>
+  <div id="candidates" class="candidates" hidden></div>
   <nav class="windows" id="windows" aria-label="Date range">
     <button data-window="today">Tonight</button>
     <button data-window="weekend">This weekend</button>

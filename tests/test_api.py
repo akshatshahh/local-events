@@ -48,6 +48,38 @@ def test_search_returns_enriched_events(client, jambase_payload, jambase_cities)
 
 
 @respx.mock
+def test_ambiguous_city_is_not_auto_picked(client):
+    """LA matches many La* cities; we return them instead of silently choosing Las Vegas."""
+    respx.get(f"{BASE}/geographies/cities").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "cities": [
+                    {
+                        "name": "Las Vegas",
+                        "geo": {"latitude": 36.1, "longitude": -115.1},
+                        "address": {"addressRegion": "US-NV", "addressCountry": "US"},
+                        "x-numUpcomingEvents": 2359,
+                    },
+                    {
+                        "name": "Lakewood",
+                        "geo": {"latitude": 41.4, "longitude": -81.8},
+                        "address": {"addressRegion": "US-OH", "addressCountry": "US"},
+                        "x-numUpcomingEvents": 95,
+                    },
+                ]
+            },
+        )
+    )
+    res = client.get("/api/events", params={"location": "LA"})
+    assert res.status_code == 409
+    body = res.json()["error"]
+    assert body["code"] == "ambiguous_location"
+    labels = [c["label"] for c in body["candidates"]]
+    assert labels == ["Las Vegas, NV", "Lakewood, OH"]
+
+
+@respx.mock
 def test_unknown_location_is_404(client):
     respx.get(f"{BASE}/geographies/cities").mock(
         return_value=httpx.Response(200, json={"cities": []})

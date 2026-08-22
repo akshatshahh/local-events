@@ -42,16 +42,17 @@ class JamBaseProvider(EventProvider):
 
     # -- location ---------------------------------------------------------
 
-    async def resolve_location(self, query: str) -> ResolvedLocation | None:
+    async def find_cities(self, query: str) -> list[ResolvedLocation]:
+        """Return every mappable city JamBase sent. Never pick by upcoming count."""
         text = (query or "").strip()
         if not text:
-            return None
+            return []
 
         if match := LATLNG_RE.match(text):
             lat, lng = float(match.group(1)), float(match.group(2))
             if -90 <= lat <= 90 and -180 <= lng <= 180:
-                return await self._nearest_city(lat, lng)
-            return None
+                return [await self._nearest_city(lat, lng)]
+            return []
 
         city_name, state_iso = self._split_city_state(text)
         payload = await self._client.get(
@@ -59,18 +60,21 @@ class JamBaseProvider(EventProvider):
             {
                 "geoCityName": city_name,
                 "geoStateIso": state_iso,
-                # Only offer places that actually have something to attend.
                 "cityHasUpcomingEvents": "true",
                 "perPage": 10,
             },
         )
         cities = [c for c in (payload.get("cities") or []) if isinstance(c, dict)]
-        if not cities:
-            return None
+        found: list[ResolvedLocation] = []
+        for raw in cities:
+            loc = self._city_to_location(raw)
+            if loc:
+                found.append(loc)
+        return found
 
-        # Disambiguate ("Springfield") by picking the busiest match.
-        best = max(cities, key=lambda c: c.get("x-numUpcomingEvents") or 0)
-        return self._city_to_location(best)
+    async def resolve_location(self, query: str) -> ResolvedLocation | None:
+        found = await self.find_cities(query)
+        return found[0] if len(found) == 1 else None
 
     async def _nearest_city(self, lat: float, lng: float) -> ResolvedLocation:
         """Label a raw coordinate with its nearest known city, for display."""
@@ -121,12 +125,15 @@ class JamBaseProvider(EventProvider):
         name = str(city.get("name") or "").strip() or None
         if not name:
             return None
+        upcoming = city.get("x-numUpcomingEvents")
+        count = int(upcoming) if isinstance(upcoming, (int, float)) else None
         return ResolvedLocation(
             label=f"{name}, {region}" if region else name,
             geo=GeoPoint(latitude=float(lat), longitude=float(lng)),
             city=name,
             region=region,
             country=str(address.get("addressCountry") or "") or None,
+            upcoming_event_count=count,
         )
 
     # -- events -----------------------------------------------------------

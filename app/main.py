@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router
 from app.config import get_settings
-from app.errors import AppError
+from app.errors import AppError, AmbiguousLocation
 from app.providers.jambase.provider import JamBaseProvider
 from app.providers.registry import ProviderRegistry
 from app.services.cache import TTLCache
@@ -61,10 +61,10 @@ def create_app() -> FastAPI:
     @app.exception_handler(AppError)
     async def handle_app_error(_: Request, exc: AppError) -> JSONResponse:
         """Our own errors carry a status and a stable code; everything else 500s."""
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"error": {"code": exc.code, "message": exc.message}},
-        )
+        content: dict = {"error": {"code": exc.code, "message": exc.message}}
+        if isinstance(exc, AmbiguousLocation):
+            content["error"]["candidates"] = [c.model_dump() for c in exc.candidates]
+        return JSONResponse(status_code=exc.status_code, content=content)
 
     app.include_router(router)
 
