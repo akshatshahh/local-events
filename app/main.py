@@ -9,10 +9,13 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.reservations import router as reservations_router
 from app.api.routes import router
-from app.config import get_settings
-from app.errors import AppError, AmbiguousLocation
+from app.config import get_settings, payments_enabled
+from app.db import build_engine, init_models
+from app.errors import AmbiguousLocation, AppError
 from app.providers.jambase.provider import JamBaseProvider
 from app.providers.registry import ProviderRegistry
 from app.services.cache import TTLCache
@@ -28,6 +31,15 @@ WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 async def lifespan(app: FastAPI):
     """Build providers once at startup; close their connection pools on exit."""
     settings = get_settings()
+    # Raises if a live key or a half-configured Stripe pair is set.
+    app.state.payments_enabled = payments_enabled(settings)
+    engine = build_engine(settings.database_url)
+    await init_models(engine)
+    app.state.engine = engine
+    app.state.session_factory = async_sessionmaker(
+        engine, expire_on_commit=False, class_=AsyncSession
+    )
+
     registry = ProviderRegistry()
 
     # The only place a concrete provider is named. Adding a source is one line.
@@ -44,10 +56,13 @@ async def lifespan(app: FastAPI):
             max_entries=settings.cache_max_entries,
         ),
     )
+    if not app.state.payments_enabled:
+        logger.info("stripe outcome=disabled")
     try:
         yield
     finally:
         await registry.aclose()
+        await engine.dispose()
 
 
 def create_app() -> FastAPI:
@@ -67,6 +82,15 @@ def create_app() -> FastAPI:
         return JSONResponse(status_code=exc.status_code, content=content)
 
     app.include_router(router)
+    app.include_router(reservations_router)
+
+    @app.get("/reservations/success", include_in_schema=False)
+    async def reservation_success() -> FileResponse:
+        return FileResponse(WEB_DIR / "reservation-success.html")
+
+    @app.get("/reservations/cancel", include_in_schema=False)
+    async def reservation_cancel() -> FileResponse:
+        return FileResponse(WEB_DIR / "reservation-cancel.html")
 
     if WEB_DIR.is_dir():
         app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")

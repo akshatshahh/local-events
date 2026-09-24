@@ -28,9 +28,33 @@ class BadRequest(AppError):
     code = "bad_request"
 
 
+class NotFound(AppError):
+    status_code = 404
+    code = "not_found"
+
+
 class LocationNotFound(AppError):
     status_code = 404
     code = "location_not_found"
+
+
+class CapacityExceeded(AppError):
+    """Pending plus confirmed spots would pass the per-event cap."""
+
+    status_code = 409
+    code = "capacity_exceeded"
+
+
+class PaymentsNotConfigured(AppError):
+    status_code = 503
+    code = "payments_not_configured"
+
+
+class CheckoutFailed(AppError):
+    """Stripe did not open a session. The pending hold was released."""
+
+    status_code = 502
+    code = "checkout_failed"
 
 
 class AmbiguousLocation(AppError):
