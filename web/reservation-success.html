@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reservation — Local Events</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<main>
+  <p class="test-mode">Test mode: no real charges.</p>
+  <h1>Reservation</h1>
+  <p id="status" class="status" role="status">Checking status…</p>
+  <p><a href="/">Back to events</a></p>
+</main>
+<script>
+const params = new URLSearchParams(location.search);
+const id = params.get("reservation_id");
+const statusEl = document.getElementById("status");
+
+async function poll() {
+  if (!id) {
+    statusEl.textContent = "Missing reservation. Test mode: no real charges.";
+    return;
+  }
+  for (let i = 0; i < 15; i++) {
+    const res = await fetch("/api/reservations/" + encodeURIComponent(id));
+    const data = await res.json();
+    if (!res.ok) {
+      statusEl.textContent = (data.error && data.error.message) || "Could not load the reservation.";
+      return;
+    }
+    if (data.status === "confirmed") {
+      statusEl.textContent = "Confirmed. Test mode: no real charges.";
+      return;
+    }
+    statusEl.textContent = "Status: " + data.status + ". Test mode: no real charges.";
+    if (data.status !== "pending") return;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+}
+poll();
+</script>
+</body>
+</html>

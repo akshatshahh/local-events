@@ -24,7 +24,7 @@ cp .env.example .env   # then put your key in JAMBASE_API_KEY
 
 Open <http://127.0.0.1:8000>. Interactive API docs at `/docs`.
 
-Optional — 18 tests, no network, no API key:
+Optional — 31 tests, no network, no API key:
 
 ```bash
 .venv/bin/pip install -r requirements-dev.txt && .venv/bin/python -m pytest
@@ -39,8 +39,80 @@ I only test the things a wrong answer would look like it works:
 | `test_discovery.py` | One dead provider 500ing the request; the same show listed twice; cache not used |
 | `test_enrich.py` | Distance invented when geo is missing; a venue-size tag with no capacity |
 | `test_provider_jambase.py` | Wrong JamBase query params (silent empty pages) |
+| `test_reservations.py` | Oversell under parallel holds; live Stripe key refused; 4xx not retried; 5xx retried; bad webhook signature; duplicate webhook; expired-after-paid left confirmed |
 
 I do not test FastAPI's own 422s, the TTL cache internals, or every capacity-band boundary. Those are either the framework or easy to see in the code.
+
+---
+
+## Stripe payments (test mode)
+
+**Test mode: no real charges.** Checkout uses a Stripe test key (`sk_test_...`). The process refuses to start if `STRIPE_SECRET_KEY` is set and does not start with `sk_test_`. The fee is **$5.00 per spot** (500 cents), quantity 1–4. A hold lasts until Stripe expires the Checkout Session (30 minutes) or the webhook marks it confirmed.
+
+Leave both Stripe variables empty and event search still runs. Reservations return 503 until they are set.
+
+### Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant DB
+    participant Stripe
+    Client->>API: POST /api/reservations
+    API->>DB: one transaction, cap check and pending row
+    API->>Stripe: Checkout Session, Idempotency-Key = reservation id
+    Stripe-->>API: checkout url
+    API-->>Client: checkout_url
+    Client->>Stripe: pay with test card 4242
+    Stripe->>API: POST /api/stripe/webhook (signed)
+    API->>DB: insert stripe_event_id, pending to confirmed
+    Client->>API: GET /api/reservations/{id}
+    API-->>Client: confirmed
+```
+
+If Checkout never opens, the pending row is marked `canceled` and the hold is released. If the buyer leaves Checkout, the row stays `pending` until `checkout.session.expired`.
+
+### State machine
+
+| From | Event | To | Capacity |
+| --- | --- | --- | --- |
+| — | `POST /api/reservations` | `pending` | counted |
+| `pending` | `checkout.session.completed` | `confirmed` | still counted |
+| `pending` | `checkout.session.expired` | `expired` | released |
+| `pending` | Stripe error while creating the session | `canceled` | released |
+| `confirmed` | a later `checkout.session.expired` | `confirmed` | unchanged |
+
+Only `pending` moves. A repeated webhook with the same `stripe_event_id` returns 200 and does nothing.
+
+### Run locally
+
+```bash
+stripe listen --forward-to localhost:8000/api/stripe/webhook
+```
+
+Put the `whsec_...` from that command in `STRIPE_WEBHOOK_SECRET`. Card: **4242 4242 4242 4242**, any future expiry, any CVC. **Test mode: no real charges.**
+
+### Env vars
+
+| Variable | Role |
+| --- | --- |
+| `STRIPE_SECRET_KEY` | Test secret. Must start with `sk_test_` or the process will not start. |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret for `POST /api/stripe/webhook`. Required when the key is set. |
+| `BASE_URL` | Success and cancel URLs. Default `http://127.0.0.1:8000`. |
+| `DATABASE_URL` | Async SQLAlchemy URL. Default local SQLite. |
+| `RESERVATION_CAP_PER_EVENT` | Pending + confirmed spots per event. Default 10. |
+
+### Design decisions
+
+- **Idempotency key.** The Stripe Idempotency-Key is the reservation id. A retried Checkout create for that row cannot open a second session. A different reservation gets a different key.
+- **Webhook dedupe table.** `processed_webhook_events.stripe_event_id` is unique. The insert and the status change are one transaction. A duplicate delivery hits the constraint and returns 200.
+- **Transactional capacity.** `event_holds.held_quantity` is updated with `WHERE held + qty <= cap` in the same transaction as the insert. Two overlapping requests cannot both pass a count-then-insert check.
+- **Test-mode guard.** A key that does not start with `sk_test_` aborts startup, so a live secret cannot charge cards from this app.
+
+### Render
+
+Set the env vars on the service. In the Stripe dashboard, add a **test-mode** webhook endpoint pointing at `https://<your-service>/api/stripe/webhook` for `checkout.session.completed` and `checkout.session.expired`. Use a Render Postgres `DATABASE_URL` (the app rewrites `postgres://` to `postgresql+asyncpg://`). The free-tier disk is ephemeral, so SQLite on the instance would drop reservations on restart.
 
 ---
 
@@ -127,7 +199,7 @@ Honest degradation: if a provider fails, the status line says so.
 - **Genre filtering re-queries upstream** instead of filtering client-side — simpler, one code path.
 - **Facet counts are computed over the returned page**, not globally, so a chip can read
   "bluegrass (3)" and return 5 results once selected. Honest fix needs a real aggregation query.
-- **No persistence.** No database, no saved events, no user accounts.
+- **Discovery is not persisted.** Search results are not stored. Reservations are the exception: they live in Postgres (or local SQLite) so a webhook can confirm a hold. No user accounts.
 - **Dedupe keys on (date, city, headliner)** rather than venue, since venue names vary between
   sources. Two different shows by the same act in one city on one night would over-merge — rare
   enough to accept today, but it's the first thing I'd revisit with a second provider live.
@@ -233,6 +305,6 @@ is done. What genuinely changes at 10 providers:
 
 | Area | Grade | Reasoning |
 | --- | --- | --- |
-| **Code quality** | **A−** | Clear layering, typed throughout, 18 tests aimed at silent-wrong failures (live mapping, retries, provider isolation, ambiguous cities), lint clean. Marked down because there's no structured logging and the frontend has no tests. |
+| **Code quality** | **A−** | Clear layering, typed throughout, 31 tests aimed at silent-wrong failures (live mapping, retries, provider isolation, ambiguous cities, reservation capacity and webhooks), lint clean. Marked down because the frontend has no tests. |
 | **Work product** | **A−** | Complete and working against live data: geocoding, filtering, soonest/closest sort, honest missing-data states. Marked down for no pagination and no map. |
 | **Extensibility** | **A** | The provider seam is real, not aspirational — validated by the fact that the entire discovery test suite runs against fake providers, never JamBase. Adding a source touches two files. The known ceiling (cross-provider dedupe, pull-based fan-out) is identified above with a concrete plan rather than left as a surprise. |

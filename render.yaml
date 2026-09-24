@@ -11,3 +11,13 @@ services:
         value: "3.12.6"
       - key: JAMBASE_API_KEY
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: RESERVATION_CAP_PER_EVENT
+        sync: false

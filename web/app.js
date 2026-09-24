@@ -190,6 +190,18 @@ function card(e) {
       ${support.length ? `<div class="lineup">with <strong>${support.map((p) => esc(p.name)).join("</strong>, <strong>")}</strong>${
         namedPerformers.length - support.length - 1 > 0 ? ` +${namedPerformers.length - support.length - 1} more` : ""}</div>` : ""}
       <div class="tags">${e.signals.tags.map(tag).join("")}</div>
+      <form class="reserve">
+        <p class="test-mode">Test mode: no real charges. $5 fee per spot.</p>
+        <input type="hidden" name="event_id" value="${esc(e.id)}" />
+        <input type="email" name="email" required placeholder="Email" autocomplete="email" />
+        <select name="quantity" aria-label="Quantity">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
+        <button type="submit">Reserve a spot</button>
+      </form>
     </div>
     <div class="actions">
       ${e.signals.distance_km != null ? `<span class="dist">${e.signals.distance_km} km away</span>` : `<span class="dist missing">${NOT_LISTED}</span>`}
@@ -236,6 +248,36 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
+
+resultsEl.addEventListener("submit", async (ev) => {
+  const reserve = ev.target.closest("form.reserve");
+  if (!reserve) return;
+  ev.preventDefault();
+  const button = reserve.querySelector("button");
+  button.disabled = true;
+  const body = {
+    event_id: new FormData(reserve).get("event_id"),
+    email: new FormData(reserve).get("email"),
+    quantity: Number(new FormData(reserve).get("quantity")),
+  };
+  try {
+    const res = await fetch("/api/reservations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setStatus((data.error && data.error.message) || "Could not start checkout.", true);
+      button.disabled = false;
+      return;
+    }
+    window.location.assign(data.checkout_url);
+  } catch (err) {
+    setStatus("Could not reach the server.", true);
+    button.disabled = false;
+  }
+});
 
 form.addEventListener("submit", (ev) => {
   ev.preventDefault();

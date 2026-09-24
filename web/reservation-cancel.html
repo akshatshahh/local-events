@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Checkout canceled — Local Events</title>
+<link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<main>
+  <p class="test-mode">Test mode: no real charges.</p>
+  <h1>Checkout canceled</h1>
+  <p class="status" id="status">You left Checkout. If the session expires, the hold is released. Test mode: no real charges.</p>
+  <p><a href="/">Back to events</a></p>
+</main>
+<script>
+const id = new URLSearchParams(location.search).get("reservation_id");
+const statusEl = document.getElementById("status");
+if (!id) {
+  statusEl.textContent = "No reservation on this page. Test mode: no real charges.";
+} else {
+  fetch("/api/reservations/" + encodeURIComponent(id))
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.status) {
+        statusEl.textContent = "Status: " + data.status + ". The hold stays until Stripe expires the session. Test mode: no real charges.";
+      }
+    })
+    .catch(() => {});
+}
+</script>
+</body>
+</html>
